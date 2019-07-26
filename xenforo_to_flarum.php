@@ -202,14 +202,21 @@ if($topicCount)
 
 				// if($post['post_id'] == 913){echo $postText;}
 
-				if (empty($post['username']))// If the post_username field has text it means it's a "ghost" post. Therefore we should set the poster id to 0 so Flarum knows it's an invalid user
+                // If the post username field is empty, or user_id is 0 it means it's a "ghost" post.
+                // Therefore we should set the poster id to 0 so Flarum knows it's an invalid user
+				if (empty($post['username']) || $post['user_id'] == 0)
 				{
-					$posterID = $post['user_id'];
+					$posterID = 0;
+				} else {
+
+                    $posterID = $post['user_id'];
 
 					// Add to the array only if unique
-					if(!in_array($posterID, $participantsArr))
-						$participantsArr[] = $posterID;
-				}
+					if (!in_array($posterID, $participantsArr)) {
+                        $participantsArr[] = $posterID;
+                    }
+
+                }
 
 				if($curPost == $postCount)// Check if it's the last post in the discussion and save the poster id
 					$lastPosterID = $posterID;
@@ -277,7 +284,7 @@ if($topicCount)
 // Convert user posted topics to user discussions?
 echo "<hr> User Discussions<hr/>";
 $result = $exportDbConnection->query("SELECT user_id, thread_id FROM ${exportDBPrefix}thread WHERE user_id != 0 ");
-var_dump($exportDbConnection);
+
 if ($result->num_rows > 0)
 {
 	$total = $result->num_rows;
@@ -299,7 +306,7 @@ else
 	echo "Table is empty";
 
 
-	// Convert user posted topics to user discussions?
+// Convert user posted topics to user discussions?
 echo "<hr>last Step Update User table<hr/>";
 $result = $importDbConnection->query("SELECT id FROM users");
 if ($result->num_rows > 0)
