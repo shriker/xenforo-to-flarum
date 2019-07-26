@@ -38,6 +38,8 @@ $importDbConnection = new mysqli($servername, $username, $password, $importDBNam
 echo "<h1>XenForo 1.5 to Flarum</h1>";
 
 // Check connection
+echo "<p>";
+
 if ($exportDbConnection->connect_error)
     die("Export - Connection failed: " . $exportDbConnection->connect_error);
 else
@@ -52,6 +54,8 @@ else
     else
         printf("Current character set: %s\n", $exportDbConnection->character_set_name());
 }
+
+echo "</p><p>";
 
 // Check connection
 if ($importDbConnection->connect_error)
@@ -68,6 +72,8 @@ else
     else
         printf("Current character set: %s\n", $importDbConnection->character_set_name());
 }
+
+echo "</p>";
 
 
 // Disable foreign key check
@@ -311,7 +317,7 @@ if ($topicCount)
 }
 
 // Convert user posted topics to user discussions?
-echo "<h2>Step 4 - User Discussions</h2>";
+echo "<h2>Step 4 - Link Users to Discussions</h2>";
 $result = $exportDbConnection->query("SELECT user_id, thread_id FROM ${exportDBPrefix}thread WHERE user_id != 0 ");
 
 if ($result->num_rows > 0)
@@ -340,7 +346,7 @@ else
 
 
 // Convert user posted topics to user discussions?
-echo "<h2>Step 5 - Update User Counts</h2>";
+echo "<h2>Step 5 - Update User Content Counts</h2>";
 $result = $importDbConnection->query("SELECT id FROM users");
 if ($result->num_rows > 0)
 {

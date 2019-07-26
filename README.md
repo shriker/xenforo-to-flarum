@@ -1,6 +1,6 @@
 # XenForo to Flarum
 
-Migration Script from [XenForo](https://xenforo.com/) 1.5 to [Flarum](https://flarum.org/) v0.1.0-beta.8
+Migration Script from [XenForo](https://xenforo.com/) 1.5 to [Flarum](https://flarum.org/) v0.1.0-beta.9
 
 Discussion https://discuss.flarum.org/d/1117-phpbb-migrate-script-updated-for-0-3-and-other-improvements
 
