@@ -70,8 +70,7 @@ else
 }
 
 
-//Disable foreing keys check
-
+// Disable foreign key check
 $importDbConnection->query("SET FOREIGN_KEY_CHECKS=0");
 
 
@@ -189,12 +188,12 @@ if ($topicCount)
 {
     $curTopicCount = 0;
     $insertString  = "INSERT INTO " . $importDBPrefix . "posts (id, user_id, discussion_id, created_at, type, content) VALUES \n";
-    //    Loop trough all PHPBB topics
+    // Loop trough all XenForo threads
     $topictotal    = $topicsQuery->num_rows;
     $i             = 1;
     while ($topic = $topicsQuery->fetch_assoc())
     {
-        //    Convert posts per topic
+        // Convert posts per topic
         $participantsArr = [];
         $lastPosterID = 0;
 
@@ -206,7 +205,6 @@ if ($topicCount)
         {
             $curPost = 0;
 
-            //fwrite($sqlScript_posts, $insertString);
             while ($post = $postsQuery->fetch_assoc())
             {
                 $curPost++;
