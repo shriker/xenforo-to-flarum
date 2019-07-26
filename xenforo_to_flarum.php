@@ -1,8 +1,10 @@
 <?php
+
 // Original script by robrotheram from discuss.flarum.org
 // Modified by VIRUXE
 // Modified by Reflic
 // Modified by TidbitSoftware
+// Modified by Jodie Struthers for XenForo
 
 set_time_limit(0);
 ini_set('memory_limit', -1);
@@ -10,17 +12,30 @@ ini_set('memory_limit', -1);
 ini_set("log_errors", 1);
 ini_set("error_log", "php-error.log");
 
+/**
+ * Databases connection
+ */
 $servername = "localhost";
-$username = "user";
-$password = "password";
-$exportDBName = "PHPforums";
+$username = "";
+$password = "";
+
+/**
+ * Migrating from (XenForo)
+ */
+$exportDBName = "xenforo";
+$exportDBPrefix = "xf_";
+
+/**
+ * Migrating to (Flarum)
+ */
 $importDBName = "flarum";
-$exportDBPrefix = "phpbb_";
-$importDBPrefix = ""; // Leave blank if you did not supply a table prefix when setting up Flarum. Otherwise, supply the full table prefix (i.e. including "_", if used).
+$importDBPrefix = "";
 
-
-// Establish a connection to the server where the PHPBB database exists
+// Establish connections to the server where the XenForo and Flarum databases exists
 $exportDbConnection = new mysqli($servername, $username, $password, $exportDBName);
+$importDbConnection = new mysqli($servername, $username, $password, $importDBName);
+
+echo "<h1>XenForo 1.5 to Flarum</h1>";
 
 // Check connection
 if ($exportDbConnection->connect_error)
@@ -37,9 +52,6 @@ else
 	else
 	    printf("Current character set: %s\n", $exportDbConnection->character_set_name());
 }
-
-// Establish a connection to the server where the Flarum database exists
-$importDbConnection = new mysqli($servername, $username, $password, $importDBName);
 
 // Check connection
 if ($importDbConnection->connect_error)
@@ -63,11 +75,16 @@ else
 $importDbConnection->query("SET FOREIGN_KEY_CHECKS=0");
 
 
-//Convert Users
+// Convert XenForo Users to Flarum Users
 
 echo "<hr>Step 1 - Users<hr>";
-$result = $exportDbConnection->query("SELECT user_id, from_unixtime(user_regdate) as user_regdate, username_clean, user_email FROM ${exportDBPrefix}users");
+$result = $exportDbConnection->query("SELECT user_id,
+from_unixtime(register_date) as user_regdate,
+from_unixtime(last_activity) as last_seen_at,
+username, email
+FROM ${exportDBPrefix}user");
 $totalUsers = $result->num_rows;
+
 if ($totalUsers)
 {
 	$i = 0;
@@ -76,9 +93,9 @@ if ($totalUsers)
 	{
 		$i++;
 
-		if($row["user_email"] != NULL)
+		if($row["email"] != NULL)
 		{
-			$username = $row["username_clean"];
+			$username = $row["username"];
 			$usernameHasSpace = strpos($username, " ");
 
 			if($usernameHasSpace > 0)
@@ -89,10 +106,12 @@ if ($totalUsers)
 				$formatedUsername = $username;
 			}
 			$id = $row['user_id'];
-			$email = $row['user_email'];
+			$email = $row['email'];
 			$password = sha1(md5(time()));
-			$jointime = $row['user_regdate'];
-			$query = "INSERT INTO " . $importDBPrefix . "users (id, username, email, password, joined_at, is_email_confirmed) VALUES ( '$id', '$formatedUsername', '$email', '$password', '$jointime', 1)";
+            $jointime = $row['user_regdate'];
+            $last_seen_at = $row['last_seen_at'];
+            $query = "INSERT INTO " . $importDBPrefix . "users (id, username, email, password, joined_at, last_seen_at, is_email_confirmed)
+            VALUES ( '$id', '$formatedUsername', '$email', '$password', '$jointime', '$last_seen_at', 1)";
 			$res = $importDbConnection->query($query);
 			if($res === false) {
 				echo "Wrong SQL: " . $query . " Error: " . $importDbConnection->error . " <br/>\n";
@@ -110,8 +129,12 @@ else
 //Convert Categories to Tags
 
 echo "<hr>Step 2 - Categories<hr>";
-$result = $exportDbConnection->query("SELECT forum_id, forum_name, forum_desc  FROM ${exportDBPrefix}forums");
+$result = $exportDbConnection->query("SELECT node_id as forum_id,
+title as forum_name, description as forum_desc
+FROM ${exportDBPrefix}node
+WHERE node_type_id = 'Forum' ");
 $totalCategories = $result->num_rows;
+
 if ($totalCategories)
 {
 	$i = 1;
@@ -139,9 +162,10 @@ if ($totalCategories)
 else
 	echo "Something went wrong.";
 
-
-echo "<hr>Step 3 - Topics<hr>";
-$topicsQuery = $exportDbConnection->query("SELECT topic_id, topic_poster, forum_id, topic_title, topic_time FROM ${exportDBPrefix}topics ORDER BY topic_id DESC;");
+echo "<hr>Step 3 - Threads and Posts<hr>";
+$topicsQuery = $exportDbConnection->query("SELECT thread_id as topic_id, user_id as topic_poster, node_id as forum_id, title as topic_title, post_date as topic_time
+FROM ${exportDBPrefix}thread
+ORDER BY topic_id DESC;");
 $topicCount = $topicsQuery->num_rows;
 
 if($topicCount)
@@ -157,7 +181,7 @@ if($topicCount)
 		$participantsArr = [];
 		$lastPosterID = 0;
 
-		$sqlQuery = sprintf("SELECT * FROM ${exportDBPrefix}posts WHERE topic_id = %d;", $topic["topic_id"]);
+		$sqlQuery = sprintf("SELECT * FROM ${exportDBPrefix}post WHERE thread_id = %d;", $topic["topic_id"]);
 		$postsQuery = $exportDbConnection->query($sqlQuery);
 		$postCount = $postsQuery->num_rows;
 
@@ -170,17 +194,17 @@ if($topicCount)
 			{
 				$curPost++;
 
-				$posterID = 0;
+				$posterID = $post['user_id'];
 				$date = new DateTime();
-				$date->setTimestamp($post["post_time"]);
+				$date->setTimestamp($post["post_date"]);
 				$postDate =  $date->format('Y-m-d H:i:s');
-				$postText = formatText($exportDbConnection, $post['post_text']);
+				$postText = formatText($exportDbConnection, $post['message']);
 
-				if($post['post_id'] == 913){echo $postText;}
+				// if($post['post_id'] == 913){echo $postText;}
 
-				if(empty($post['post_username']))// If the post_username field has text it means it's a "ghost" post. Therefore we should set the poster id to 0 so Flarum knows it's an invalid user
+				if (empty($post['username']))// If the post_username field has text it means it's a "ghost" post. Therefore we should set the poster id to 0 so Flarum knows it's an invalid user
 				{
-					$posterID = $post['poster_id'];
+					$posterID = $post['user_id'];
 
 					// Add to the array only if unique
 					if(!in_array($posterID, $participantsArr))
@@ -189,9 +213,6 @@ if($topicCount)
 
 				if($curPost == $postCount)// Check if it's the last post in the discussion and save the poster id
 					$lastPosterID = $posterID;
-
-				// Write post values to SQL Script
-				//fwrite($sqlScript_posts, sprintf("\t(%d, %d, %d, '%s', 'comment', '%s')%s\n", $post['post_id'], $posterID, $topic['topic_id'], $postDate, $postText, $curPost != $postCount ? "," : ";"));
 
 				// Execute the insert query in the desired database.
 				$formattedValuesStr = sprintf("(%d, %d, %d, '%s', 'comment', '%s');", $post['post_id'], $posterID, $topic['topic_id'], $postDate, $postText);
@@ -226,7 +247,7 @@ if($topicCount)
 
 
 		// Check for parent forums
-		$parentForum = $exportDbConnection->query("SELECT parent_id FROM ${exportDBPrefix}forums WHERE forum_id = " . $topic["forum_id"]);
+		$parentForum = $exportDbConnection->query("SELECT parent_node_id as parent_id FROM ${exportDBPrefix}node WHERE node_id = " . $topic["forum_id"]);
 		$result = $parentForum->fetch_assoc();
 		if($result['parent_id'] > 0){
 			$topicid = $topic["topic_id"];
@@ -252,9 +273,11 @@ if($topicCount)
 		$i++;
 	}
 }
+
 // Convert user posted topics to user discussions?
 echo "<hr> User Discussions<hr/>";
-$result = $exportDbConnection->query("SELECT user_id, topic_id FROM ${exportDBPrefix}topics_posted");
+$result = $exportDbConnection->query("SELECT user_id, thread_id FROM ${exportDBPrefix}thread WHERE user_id != 0 ");
+var_dump($exportDbConnection);
 if ($result->num_rows > 0)
 {
 	$total = $result->num_rows;
@@ -262,7 +285,7 @@ if ($result->num_rows > 0)
 	while($row = $result->fetch_assoc()) {
 		$comma =  $i == $total ? ";" : ",";
 		$userID = $row["user_id"];
-		$topicID = $row["topic_id"];
+		$topicID = $row["thread_id"];
 		$query = "INSERT INTO " . $importDBPrefix . "discussion_user (user_id, discussion_id) VALUES ( '$userID', '$topicID')";
 		$res = $importDbConnection->query($query);
 		if($res === false) {
@@ -286,13 +309,13 @@ if ($result->num_rows > 0)
 	while($row = $result->fetch_assoc()) {
 		$comma =  $i == $total ? ";" : ",";
 		$userID = $row["id"];
-		$res = $importDbConnection->query("select * from users_discussions where user_id = '$userID' ");
+		$res = $importDbConnection->query("select * from discussion_user where user_id = '$userID' ");
 		$numTopics =  $res->num_rows;
 
 		$res1 = $importDbConnection->query("select * from posts where user_id = '$userID' ");
 		$numPosts =  $res1->num_rows;
 
-		$query = "UPDATE " . $importDBPrefix . "users SET discussions_count = '$numTopics',  comment_count = '$numPosts' WHERE id = '$userID' ";
+		$query = "UPDATE " . $importDBPrefix . "users SET discussion_count = '$numTopics',  comment_count = '$numPosts' WHERE id = '$userID' ";
 		$res = $importDbConnection->query($query);
 		if($res === false) {
 			echo "Wrong SQL: " . $query . " Error: " . $importDbConnection->error . " <br/>\n";
@@ -320,9 +343,10 @@ function print_r2($val)
 function slugify($text)
 {
 	$text = preg_replace('~[^\\pL\d]+~u', '-', $text);
-	$text = trim($text, '-');
-	$text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
-	$text = strtolower($text);
+    $text = trim($text, '-');
+    // Multibyte String Functions in case of emojis
+    $text = mb_strtolower($text);
+	$text = iconv('utf-8', 'utf-8//TRANSLIT', $text);
 	$text = preg_replace('~[^-\w]+~', '', $text);
 
 	if (empty($text))
@@ -427,4 +451,3 @@ function trimSmilies($postText)
 
 	return $postText;
 }
-?>
