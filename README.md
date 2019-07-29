@@ -28,9 +28,10 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
 ## Scripts
 
 | Name | Description |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| xenforo_connection.php   | Where to edit your database connection variables.                                             |
-| xenforo_to_flarum.php    | The primary migration script for your forum threads and posts.                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| **xenforo_connection.php**   | Where to edit your database connection variables.                                             |
+| *xenforo_to_flarum.php*      | Primary migration script for your forum threads and posts.                                    |
+| xenforo_tags.php             | Migrate XenForo tags as secondary tags and associate them with imported discussions.          |
 
 ## Contributions Welcome
 
