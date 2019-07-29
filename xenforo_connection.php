@@ -11,8 +11,8 @@ class Database
     // ✨ Change these variables ✨
     //***********************************************/
     protected $servername   = "localhost";
-	protected $username     = "";
-	protected $password     = "";
+    protected $username     = "";
+    protected $password     = "";
 
     // Table migrating from (XenForo)
     public $exportDBName   = "xenforo";
@@ -25,10 +25,10 @@ class Database
     //***********************************************/
 
     public function __contruct($servername, $username, $password, $exportDBName, $exportDBPrefix, $importDBName, $importDBPrefix, $adminUserID)
-	{
-		$this->servername       = $servername;
-		$this->username         = $username;
-		$this->password         = $password;
+    {
+        $this->servername       = $servername;
+        $this->username         = $username;
+        $this->password         = $password;
         $this->exportDBName     = $exportDBName;
         $this->exportDBPrefix   = $exportDBPrefix;
         $this->importDBName     = $importDBName;
@@ -37,7 +37,7 @@ class Database
     }
 
     public function connectExport()
-	{
+    {
         $exportDbConnection = new mysqli($this->servername, $this->username, $this->password, $this->exportDBName);
 
         if ($exportDbConnection->connect_error)

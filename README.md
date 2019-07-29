@@ -2,8 +2,6 @@
 
 Migration Script from [XenForo](https://xenforo.com/) 1.5 to [Flarum](https://flarum.org/) v0.1.0-beta.9
 
-Discussion https://discuss.flarum.org/d/1117-phpbb-migrate-script-updated-for-0-3-and-other-improvements
-
 This script performs a DB -> DB migration. It will copy all usernames and emails and registration date but *will not copy passwords*. This means after the migration, all users will need to reset their passwords.
 
 ## Usage Instructions
