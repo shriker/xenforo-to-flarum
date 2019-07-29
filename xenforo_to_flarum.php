@@ -1,84 +1,20 @@
 <?php
 
-// Original script by robrotheram from discuss.flarum.org
-// Modified by VIRUXE
-// Modified by Reflic
-// Modified by TidbitSoftware
-// Modified by Jodie Struthers for XenForo
-
-set_time_limit(0);
-ini_set('memory_limit', -1);
-
-ini_set("log_errors", 1);
-ini_set("error_log", "php-error.log");
-
 /**
- * Databases connection
+ * Original script by robrotheram from discuss.flarum.org
+ * Modified by VIRUXE
+ * Modified by Reflic
+ * Modified by TidbitSoftware
+ * Modified by Jodie Struthers for XenForo
  */
-$servername = "localhost";
-$username   = "";
-$password   = "";
 
-/**
- * Migrating from (XenForo)
- */
-$exportDBName   = "xenforo";
-$exportDBPrefix = "xf_";
-
-/**
- * Migrating to (Flarum)
- */
-$importDBName   = "flarum";
-$importDBPrefix = "";
-
-// Establish connections to the server where the XenForo and Flarum databases exists
-$exportDbConnection = new mysqli($servername, $username, $password, $exportDBName);
-$importDbConnection = new mysqli($servername, $username, $password, $importDBName);
+require_once('xenforo_connection.php');
 
 echo "<h1>XenForo 1.5 to Flarum</h1>";
 
-// Check connection
-echo "<p>";
-
-if ($exportDbConnection->connect_error)
-    die("Export - Connection failed: " . $exportDbConnection->connect_error);
-else
-{
-    echo "Export - Connected successfully<br>\n";
-
-    if (!$exportDbConnection->set_charset("utf8"))
-    {
-        printf("Error loading character set utf8: %s\n", $exportDbConnection->error);
-        exit();
-    }
-    else
-        printf("Current character set: %s\n", $exportDbConnection->character_set_name());
-}
-
-echo "</p><p>";
-
-// Check connection
-if ($importDbConnection->connect_error)
-    die("Import - Connection failed: " . $importDbConnection->connect_error);
-else
-{
-    echo "Import - Connected successfully<br>\n";
-
-    if (!$importDbConnection->set_charset("utf8"))
-    {
-        printf("Error loading character set utf8: %s\n", $importDbConnection->error);
-        exit();
-    }
-    else
-        printf("Current character set: %s\n", $importDbConnection->character_set_name());
-}
-
-echo "</p>";
-
-
-// Disable foreign key check
-$importDbConnection->query("SET FOREIGN_KEY_CHECKS=0");
-
+$connection = new Database();
+$exportDbConnection = $connection->connectExport();
+$importDbConnection = $connection->connectImport();
 
 // Convert XenForo Users to Flarum Users
 
@@ -87,7 +23,7 @@ $result     = $exportDbConnection->query("SELECT user_id,
 from_unixtime(register_date) as user_regdate,
 from_unixtime(last_activity) as last_seen_at,
 username, email
-FROM ${exportDBPrefix}user");
+FROM " .$connection->exportDBPrefix. "user");
 $totalUsers = $result->num_rows;
 
 if ($totalUsers)
@@ -116,7 +52,7 @@ if ($totalUsers)
             $password     = null; // Safer to have unset passwords at the moment
             $jointime     = $row['user_regdate'];
             $last_seen_at = $row['last_seen_at'];
-            $query        = "INSERT INTO " . $importDBPrefix . "users (id, username, email, password, joined_at, last_seen_at, is_email_confirmed)
+            $query        = "INSERT INTO " . $connection->importDBPrefix . "users (id, username, email, password, joined_at, last_seen_at, is_email_confirmed)
             VALUES ( '$id', '$formatedUsername', '$email', '$password', '$jointime', '$last_seen_at', 1)";
             $res          = $importDbConnection->query($query);
             if ($res === false)
@@ -129,7 +65,7 @@ if ($totalUsers)
             $usersIgnored++;
         }
     }
-    echo $i - $usersIgnored . ' out of ' . $totalUsers . ' Total Users converted';
+    echo '<p><b>Success.</b> ' . ($i - $usersIgnored) . ' out of ' . $totalUsers . ' total users converted.</p>';
 }
 else
     echo "Something went wrong.";
@@ -140,8 +76,9 @@ echo "<h2>Step 2 - Forum Nodes</h2>";
 $result          = $exportDbConnection->query("SELECT node_id as forum_id,
 title as forum_name, description as forum_desc,
 parent_node_id as parent_id,
-display_order as position
-FROM ${exportDBPrefix}node
+display_order as position,
+node_name
+FROM " .$connection->exportDBPrefix. "node
 WHERE node_type_id = 'Forum' OR node_type_id = 'Category' ");
 $totalCategories = $result->num_rows;
 
@@ -156,14 +93,20 @@ if ($totalCategories)
         $color       = rand_color();
         $position    = $row["position"];
         $parent_id   = $row["parent_id"];
-        $slug        = mysql_escape_mimic(slugify($row["forum_name"]));
+        if (empty($row["node_name"]))
+        {
+            // We need to slugify Category names since they are not set in Xenforo
+            $slug        = mysql_escape_mimic(slugify($row["forum_name"]));
+        } else {
+            $slug        = $row["node_name"];
+        }
 
-        $query = "INSERT INTO " . $importDBPrefix . "tags (id, name, description, slug, color, position, parent_id) VALUES ( '$id', '$name', '$description', '$slug', '$color', '$position', '$parent_id')";
+        $query = "INSERT INTO " . $connection->importDBPrefix . "tags (id, name, description, slug, color, position, parent_id) VALUES ( '$id', '$name', '$description', '$slug', '$color', '$position', '$parent_id')";
         $res   = $importDbConnection->query($query);
         if ($res === false)
         {
             echo "Wrong SQL Assumption id Confict now trying a update  <br/>\n";
-            $queryupdate = "UPDATE " . $importDBPrefix . "tags SET name = '$name', description = '$description', slug = '$slug' WHERE id = '$id' ;";
+            $queryupdate = "UPDATE " . $connection->importDBPrefix . "tags SET name = '$name', description = '$description', slug = '$slug' WHERE id = '$id' ;";
             $res         = $importDbConnection->query($queryupdate);
             if ($res === false)
             {
@@ -172,7 +115,7 @@ if ($totalCategories)
         }
         $i++;
     }
-    echo $totalCategories . ' Categories converted.';
+    echo '<p><b>Success.</b> ' . $totalCategories . ' categories converted.</p>';
 }
 else
     echo "Something went wrong.";
@@ -186,14 +129,14 @@ post_date as topic_time,
 sticky as is_sticky,
 discussion_state,
 discussion_open
-FROM ${exportDBPrefix}thread
+FROM " .$connection->exportDBPrefix. "thread
 ORDER BY topic_id DESC;");
 $topicCount  = $topicsQuery->num_rows;
 
 if ($topicCount)
 {
     $curTopicCount = 0;
-    $insertString  = "INSERT INTO " . $importDBPrefix . "posts (id, user_id, discussion_id, created_at, type, content) VALUES \n";
+    $insertString  = "INSERT INTO " . $connection->importDBPrefix . "posts (id, user_id, discussion_id, created_at, type, content) VALUES \n";
     // Loop trough all XenForo threads
     $topictotal    = $topicsQuery->num_rows;
     $i             = 1;
@@ -203,7 +146,7 @@ if ($topicCount)
         $participantsArr = [];
         $lastPosterID = 0;
 
-        $sqlQuery   = sprintf("SELECT * FROM ${exportDBPrefix}post WHERE thread_id = %d;", $topic["topic_id"]);
+        $sqlQuery   = sprintf("SELECT * FROM " .$connection->exportDBPrefix. "post WHERE thread_id = %d;", $topic["topic_id"]);
         $postsQuery = $exportDbConnection->query($sqlQuery);
         $postCount  = $postsQuery->num_rows;
 
@@ -273,7 +216,7 @@ if ($topicCount)
         $topicid = $topic["topic_id"];
         $forumid = $topic["forum_id"];
 
-        $query = "INSERT INTO " . $importDBPrefix . "discussion_tag (discussion_id, tag_id) VALUES( '$topicid', '$forumid')";
+        $query = "INSERT INTO " . $connection->importDBPrefix . "discussion_tag (discussion_id, tag_id) VALUES( '$topicid', '$forumid')";
         $res   = $importDbConnection->query($query);
         if ($res === false)
         {
@@ -282,13 +225,13 @@ if ($topicCount)
 
 
         // Check for parent forums
-        $parentForum = $exportDbConnection->query("SELECT parent_node_id as parent_id FROM ${exportDBPrefix}node WHERE node_id = " . $topic["forum_id"]);
+        $parentForum = $exportDbConnection->query("SELECT parent_node_id as parent_id FROM " .$connection->exportDBPrefix. "node WHERE node_id = " . $topic["forum_id"]);
         $result      = $parentForum->fetch_assoc();
         if ($result['parent_id'] > 0)
         {
             $topicid  = $topic["topic_id"];
             $parentid = $result['parent_id'];
-            $query    = "INSERT INTO " . $importDBPrefix . "discussion_tag (discussion_id, tag_id) VALUES( '$topicid', '$parentid')";
+            $query    = "INSERT INTO " . $connection->importDBPrefix . "discussion_tag (discussion_id, tag_id) VALUES( '$topicid', '$parentid')";
             $res      = $importDbConnection->query($query);
             if ($res === false)
             {
@@ -296,7 +239,9 @@ if ($topicCount)
             }
         }
         if ($lastPosterID == 0) // Just to make sure it displays an actual username if the topic doesn't have posts? Not sure about this.
+        {
             $lastPosterID = $topic["topic_poster"];
+        }
 
         $slug        = mysql_escape_mimic(slugify($topicTitle));
         $count       = count($participantsArr);
@@ -305,7 +250,7 @@ if ($topicCount)
         $is_private  = ($topic["discussion_state"] == "deleted" ? 1 : 0);
         $is_approved = ($topic["discussion_state"] == "moderated" ? 0 : 1);
         $is_sticky   = $topic["is_sticky"];
-        $query       = "INSERT INTO " . $importDBPrefix . "discussions (id, title, slug, created_at, comment_count, participant_count, first_post_id, last_post_id, user_id, last_posted_user_id, last_posted_at, is_private, is_approved, is_locked, is_sticky) VALUES( '$topicid', '$topicTitle', '$slug', '$discussionDate', '$postCount', '$count', 1, 1, '$poster', '$lastPosterID', '$discussionDate', '$is_private', '$is_approved', '$is_locked', '$is_sticky')";
+        $query       = "INSERT INTO " . $connection->importDBPrefix . "discussions (id, title, slug, created_at, comment_count, participant_count, first_post_id, last_post_id, user_id, last_posted_user_id, last_posted_at, is_private, is_approved, is_locked, is_sticky) VALUES( '$topicid', '$topicTitle', '$slug', '$discussionDate', '$postCount', '$count', 1, 1, '$poster', '$lastPosterID', '$discussionDate', '$is_private', '$is_approved', '$is_locked', '$is_sticky')";
         $res         = $importDbConnection->query($query);
         if ($res === false)
         {
@@ -314,11 +259,12 @@ if ($topicCount)
 
         $i++;
     }
+    echo '<p><b>Success.</b> ' . $topictotal . ' threads converted.</p>';
 }
 
 // Convert user posted topics to user discussions?
 echo "<h2>Step 4 - Link Users to Discussions</h2>";
-$result = $exportDbConnection->query("SELECT user_id, thread_id FROM ${exportDBPrefix}thread WHERE user_id != 0 ");
+$result = $exportDbConnection->query("SELECT user_id, thread_id FROM " .$connection->exportDBPrefix. "thread WHERE user_id != 0 ");
 
 if ($result->num_rows > 0)
 {
@@ -329,7 +275,7 @@ if ($result->num_rows > 0)
         $comma   = $i == $total ? ";" : ",";
         $userID  = $row["user_id"];
         $topicID = $row["thread_id"];
-        $query   = "INSERT INTO " . $importDBPrefix . "discussion_user (user_id, discussion_id) VALUES ( '$userID', '$topicID')";
+        $query   = "INSERT INTO " . $connection->importDBPrefix . "discussion_user (user_id, discussion_id) VALUES ( '$userID', '$topicID')";
         $res     = $importDbConnection->query($query);
         if ($res === false)
         {
@@ -337,13 +283,12 @@ if ($result->num_rows > 0)
         }
         $i++;
     }
-    echo "Success";
+    echo "<p><b>Success.</b> Threads successfully linked to users.</p>";
 }
 else
 {
     echo "Table is empty";
 }
-
 
 // Convert user posted topics to user discussions?
 echo "<h2>Step 5 - Update User Content Counts</h2>";
@@ -362,21 +307,31 @@ if ($result->num_rows > 0)
         $res1     = $importDbConnection->query("select * from posts where user_id = '$userID' ");
         $numPosts = $res1->num_rows;
 
-        $query = "UPDATE " . $importDBPrefix . "users SET discussion_count = '$numTopics',  comment_count = '$numPosts' WHERE id = '$userID' ";
+        $query = "UPDATE " . $connection->importDBPrefix . "users SET discussion_count = '$numTopics',  comment_count = '$numPosts' WHERE id = '$userID' ";
         $res   = $importDbConnection->query($query);
         if ($res === false)
         {
             echo "Wrong SQL: " . $query . " Error: " . $importDbConnection->error . " <br/>\n";
         }
     }
-    echo "Success";
+    echo "<p><b>Success.</b> User post counts updated successfully.</p>";
 }
 else
 {
     echo "Table is empty";
 }
 
-// Close connection to the database
+echo "<h2>Step 6 - Adding user_id# ".$connection->adminUserID." to Flarum Admin Group</h2>";
+$query = "INSERT INTO " . $connection->importDBPrefix . "group_user (user_id, group_id) VALUES( '$connection->adminUserID', 1)";
+$res   = $importDbConnection->query($query);
+if ($res === false)
+{
+    echo "Wrong SQL: " . $query . " Error: " . $importDbConnection->error . " <br/>\n";
+} else {
+    echo "<p><b>Success.</b> Admin user added to admin group.</p>";
+}
+
+// Close connections to the databases
 $exportDbConnection->close();
 $importDbConnection->close();
 
