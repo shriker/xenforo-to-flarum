@@ -386,10 +386,13 @@ function mysql_escape_mimic($inp)
     return $inp;
 }
 
-// Formats PHPBB's text to Flarum's text format
+// Formats XenForo's post text to Flarum's text format
 function formatText($connection, $text)
 {
     $text = preg_replace('#\:\w+#', '', $text);
+    // XenForo posts could have unescaped <> tags
+    $text = str_replace('<', '&lt;', $text);
+    $text = str_replace('>', '&gt;', $text);
     $text = convertBBCodeToHTML($text);
     $text = str_replace("&quot;", "\"", $text);
     $text = preg_replace('|[[\/\!]*?[^\[\]]*?]|si', '', $text);
@@ -455,7 +458,8 @@ function convertBBCodeToHTML($bbcode)
     $bbcode = preg_replace('#\[LIST=1](.+?)\[\/LIST]#is', "<ol>$1</ol>", $bbcode);
     // @TODO [LEFT], [CENTER], [RIGHT] - Text Alignment
     // [QUOTE] - Quoted Text
-    $bbcode = preg_replace('#\[QUOTE=(.+?)](.+?)\[\/QUOTE]#is', "<QUOTE><i>&gt;</i>$2</QUOTE>", $bbcode);
+    $bbcode = preg_replace('#\[QUOTE](.+?)\[\/QUOTE]#is', "<QUOTE><i>&gt;</i>$1</QUOTE>", $bbcode);
+    $bbcode = preg_replace('#\[QUOTE=\"(.+?)\"](.+?)\[\/QUOTE]#is', "<QUOTE><i>&gt;</i>$2</QUOTE>", $bbcode);
     // [CODE], [PHP], [HTML] - Programming Code Display
     $bbcode = preg_replace('#\[CODE:\w+](.+?)\[\/CODE:\w+]#is', "<CODE class='hljs'>$1<CODE>", $bbcode);
     $bbcode = preg_replace('#\[PLAIN](.+?)\[\/PLAIN]#is', "<code>$1<code>", $bbcode);
