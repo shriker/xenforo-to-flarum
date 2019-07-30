@@ -26,10 +26,15 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
 ## Scripts
 
 | Name | Description |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| **xenforo_connection.php**   | Where to edit your database connection variables.                                             |
-| *xenforo_to_flarum.php*      | Primary migration script for your forum threads and posts.                                    |
-| xenforo_tags.php             | Migrate XenForo tags as secondary tags and associate them with imported discussions.          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| **xenforo_connection.php**          | Where to edit your database connection variables.                                             |
+| *xenforo_to_flarum.php*             | Primary migration script for your forum threads and posts.                                    |
+| xenforo_tags.php                    | Migrate XenForo tags as secondary tags and associate them with imported discussions.          |
+| xenforo_fof_ignore_users.php        | Migrate XenForo ignored users into `fof/ignore-user` extension.                               |
+
+## Related Flarum Extensions
+
+* [fof/ignore-users](https://packagist.org/packages/fof/ignore-users) Add ignore user functionality
 
 ## Contributions Welcome
 
