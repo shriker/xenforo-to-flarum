@@ -1,7 +1,6 @@
 <?php
 
 use s9e\TextFormatter\Configurator;
-use s9e\TextFormatter\Configurator\Bundle;
 
 $configurator = new Configurator;
 
@@ -52,14 +51,12 @@ $emoticons = [
     ':lol:' => '1F602'
 ];
 
-foreach ($emoticons as $code => $hex)
-{
-    $configurator->Emoji->aliases[$code] = html_entity_decode('&#x' . $hex . ';');
+foreach ($emoticons as $code => $hex) {
+    $configurator->Emoji->aliases[$code] = html_entity_decode('&#x'.$hex.';');
 }
 
 $sites = ['bandcamp', 'dailymotion', 'facebook', 'indiegogo', 'instagram', 'kickstarter', 'liveleak', 'soundcloud', 'twitch', 'twitter', 'vimeo', 'vine', 'wshh', 'youtube'];
-foreach ($sites as $siteId)
-{
+foreach ($sites as $siteId) {
     $configurator->MediaEmbed->add($siteId);
     $configurator->BBCodes->add($siteId, ['contentAttributes' => ['id', 'url']]);
 }
