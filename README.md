@@ -6,10 +6,10 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
 
 ## Usage Instructions
 
-1. Create a fresh Flarum using the standard installation instructions.
+1. Create a fresh Flarum installation using the standard instructions.
 2. Edit `xenforo_connection.php` with your database variables. `xenforo_connection.php` must be uploaded for any of the scripts to work.
 3. Upload `xenforo_*` files to your root installation.
-4. Truncate the following *Flarum* tables:
+4. The script will truncate the following *Flarum* tables:
   ```sql
   SET FOREIGN_KEY_CHECKS = 0;
   truncate discussions;
@@ -18,6 +18,7 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
   truncate group_user;
   truncate posts;
   truncate tags;
+  truncate tag_user;
   truncate users;
   SET FOREIGN_KEY_CHECKS = 1;
   ```
@@ -27,6 +28,7 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
 
 | Name | Description |
 | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| xfscripts/                          | Where individual migration scripts live.                                                      |
 | **xenforo_connection.php**          | Where to edit your database connection variables.                                             |
 | *xenforo_to_flarum.php*             | Primary migration script for your forum threads and posts.                                    |
 | xenforo_tags.php                    | Migrate XenForo tags as secondary tags and associate them with imported discussions.          |
@@ -34,7 +36,7 @@ This script performs a DB -> DB migration. It will copy all usernames and emails
 
 ## Related Flarum Extensions
 
-* [fof/ignore-users](https://packagist.org/packages/fof/ignore-users) Add ignore user functionality
+* [fof/ignore-users](https://packagist.org/packages/fof/ignore-users) Ignore user functionality
 
 ## Contributions Welcome
 

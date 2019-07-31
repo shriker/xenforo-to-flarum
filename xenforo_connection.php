@@ -1,9 +1,18 @@
 <?php
 
+// Autoload from Flarum
+// Really should take more advantage of this
+require '../vendor/autoload.php';
+// include_once('formatter.php');
+include_once('xfscripts/XenForoBundle.php');
+
 set_time_limit(0);
 ini_set('memory_limit', -1);
+ini_set('display_errors', 'On');
+ini_set('error_reporting', 'E_ALL');
 ini_set("log_errors", 1);
 ini_set("error_log", "php-error.log");
+error_reporting(E_ALL & ~E_NOTICE);
 
 class Database
 {
