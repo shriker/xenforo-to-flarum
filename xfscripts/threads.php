@@ -109,7 +109,9 @@ if ($topicCount) {
         $is_private = ($topic['discussion_state'] == 'deleted' ? 1 : 0);
         $is_approved = ($topic['discussion_state'] == 'moderated' ? 0 : 1);
         $is_sticky = $topic['is_sticky'];
-        $query = 'INSERT INTO '.$connection->importDBPrefix."discussions (id, title, slug, created_at, comment_count, participant_count, first_post_id, last_post_id, user_id, last_posted_user_id, last_posted_at, is_private, is_approved, is_locked, is_sticky) VALUES( '$topicid', '$topicTitle', '$slug', '$discussionDate', '$postCount', '$count', 1, 1, '$poster', '$lastPosterID', '$discussionDate', '$is_private', '$is_approved', '$is_locked', '$is_sticky')";
+        $first_post_id = (int) $topic['first_post_id'];
+        $last_post_id = (int) $topic['last_post_id'];
+        $query = 'INSERT INTO '.$connection->importDBPrefix."discussions (id, title, slug, created_at, comment_count, participant_count, first_post_id, last_post_id, user_id, last_posted_user_id, last_posted_at, is_private, is_approved, is_locked, is_sticky) VALUES( '$topicid', '$topicTitle', '$slug', '$discussionDate', '$postCount', '$count', $first_post_id, $last_post_id, '$poster', '$lastPosterID', '$discussionDate', '$is_private', '$is_approved', '$is_locked', '$is_sticky')";
         $res = $importDbConnection->query($query);
         if ($res === false) {
             echo 'Wrong SQL: '.$query.' Error: '.$importDbConnection->error." <br/>\n";
